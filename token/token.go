@@ -10,18 +10,26 @@ import (
 
 var secretKey = []byte(os.Getenv("TOKEN_SECRET"))
 
+type UserClaim struct {
+	jwt.RegisteredClaims
+	AccountUUID string
+	Username    string
+	Exp         int64
+}
+
 // CreateToken generates a JWT token with the provided username and UUID.
 // The token is signed using the HS256 signing method and contains the following claims:
 // - "username": the username of the account
 // - "accountUuid": the UUID of the account
 // - "exp": the expiration time of the token, set to 24 hours from the current time
 // The function returns the generated token string and an error if any occurred.
-func CreateToken(username string) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256,
-		jwt.MapClaims{
-			"username": username,
-			"exp":      time.Now().Add(time.Hour * 24).Unix(),
-		})
+func CreateToken(username string, uuid string) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, UserClaim{
+		RegisteredClaims: jwt.RegisteredClaims{},
+		AccountUUID:      uuid,
+		Username:         username,
+		Exp:              time.Now().Add(time.Hour * 24).Unix(),
+	})
 
 	tokenString, err := token.SignedString(secretKey)
 	if err != nil {
@@ -46,4 +54,21 @@ func VerifyToken(tokenString string) error {
 	}
 
 	return nil
+}
+
+func ParseToken(tokenString string) (*UserClaim, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &UserClaim{}, func(token *jwt.Token) (interface{}, error) {
+		return secretKey, nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(*UserClaim)
+	if !ok {
+		return nil, fmt.Errorf("invalid token claims")
+	}
+
+	return claims, nil
 }
