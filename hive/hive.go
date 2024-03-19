@@ -1,8 +1,8 @@
 package hive
 
 import (
-	"example/hivemind-be/account"
 	"example/hivemind-be/db"
+	"example/hivemind-be/token"
 	"fmt"
 	"net/http"
 	"time"
@@ -32,21 +32,39 @@ type Hive struct {
 
 func CreateHive(c *gin.Context) {
 	var hive Hive
-	var account account.Account
+
+	cookie, err := c.Request.Cookie("Token")
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	tokenString := cookie.Value
+	if err := token.VerifyToken(tokenString); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	claims, err := token.ParseToken(tokenString)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
 
 	if err := c.BindJSON(&hive); err != nil {
 		return
 	}
 
-	if result := db.Db.Where("username = ?", hive.Creator).First(&account); result.Error != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{
-			"Error": "An error occurred. Please try again.",
-		})
-		return
-	}
-
+	hive.Creator = claims.Username
 	hive.UUID = uuid.NewString()
-	hive.AccountUUID = account.UUID
+	hive.AccountUUID = claims.AccountUUID
 	hive.MemberCount = 0
 	hive.TotalUpvotes = 0
 	hive.TotalDownvotes = 0
@@ -57,17 +75,34 @@ func CreateHive(c *gin.Context) {
 	hive.LastEdited = pq.NullTime{Valid: false}
 
 	if result := db.Db.Create(&hive); result.Error != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"Error": result.Error.Error(),
 		})
 		return
 	}
 
-	c.IndentedJSON(http.StatusCreated, hive)
+	c.JSON(http.StatusCreated, hive)
 }
 
 func GetHive(c *gin.Context) {
 	var hive []Hive
+	cookie, err := c.Request.Cookie("Token")
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	tokenString := cookie.Value
+	if err := token.VerifyToken(tokenString); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
 	if result := db.Db.Order("id asc").Find(&hive); result.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"Error": result.Error.Error(),
@@ -79,6 +114,23 @@ func GetHive(c *gin.Context) {
 
 func BanHiveByUuid(c *gin.Context) {
 	var hive Hive
+
+	cookie, err := c.Request.Cookie("Token")
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	tokenString := cookie.Value
+	if err := token.VerifyToken(tokenString); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
 
 	uuid := c.Param("uuid")
 	if result := db.Db.Where("uuid = ?", uuid).First(&hive); result.Error != nil {
@@ -105,6 +157,23 @@ func BanHiveByUuid(c *gin.Context) {
 func UnBanHiveByUuid(c *gin.Context) {
 	var hive Hive
 
+	cookie, err := c.Request.Cookie("Token")
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	tokenString := cookie.Value
+	if err := token.VerifyToken(tokenString); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
 	uuid := c.Param("uuid")
 	if result := db.Db.Where("uuid = ?", uuid).First(&hive); result.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -129,6 +198,23 @@ func UnBanHiveByUuid(c *gin.Context) {
 
 func ArchiveHiveByUuid(c *gin.Context) {
 	var hive Hive
+
+	cookie, err := c.Request.Cookie("Token")
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	tokenString := cookie.Value
+	if err := token.VerifyToken(tokenString); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
 
 	uuid := c.Param("uuid")
 	if result := db.Db.Where("uuid = ?", uuid).First(&hive); result.Error != nil {
@@ -155,6 +241,23 @@ func ArchiveHiveByUuid(c *gin.Context) {
 func UnArchiveHiveByUuid(c *gin.Context) {
 	var hive Hive
 
+	cookie, err := c.Request.Cookie("Token")
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	tokenString := cookie.Value
+	if err := token.VerifyToken(tokenString); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
 	uuid := c.Param("uuid")
 	if result := db.Db.Where("uuid = ?", uuid).First(&hive); result.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -180,6 +283,23 @@ func UnArchiveHiveByUuid(c *gin.Context) {
 func UpdateHiveByUuid(c *gin.Context) {
 	var hive Hive
 	var updateHive Hive
+
+	cookie, err := c.Request.Cookie("Token")
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	tokenString := cookie.Value
+	if err := token.VerifyToken(tokenString); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
 
 	if err := c.BindJSON(&updateHive); err != nil {
 		return

@@ -109,7 +109,7 @@ func AccountLogin(c *gin.Context) {
 		return
 	}
 
-	token, err := token.CreateToken(account.Username)
+	token, err := token.CreateToken(account.Username, account.UUID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"Error": "Error: A error occurred creating the token. Please try again.",
