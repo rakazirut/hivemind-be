@@ -1,10 +1,10 @@
 package comment
 
 import (
-	"example/hivemind-be/account"
 	"example/hivemind-be/content"
 	"example/hivemind-be/db"
 	"example/hivemind-be/hive"
+	"example/hivemind-be/token"
 	"net/http"
 	"time"
 
@@ -46,7 +46,32 @@ func CreateComment(c *gin.Context) {
 	var newComment Comment
 	var content content.Content
 	var hive hive.Hive
-	var account account.Account
+
+	cookie, err := c.Request.Cookie("Token")
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	tokenString := cookie.Value
+	if err := token.VerifyToken(tokenString); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	claims, err := token.ParseToken(tokenString)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
 	uid := c.Param("uuid")
 
 	if err := c.BindJSON(&newComment); err != nil {
@@ -60,16 +85,10 @@ func CreateComment(c *gin.Context) {
 		return
 	}
 
-	if result := db.Db.Where("username = ?", newComment.Author).First(&account); result.Error != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{
-			"Error": "An error occurred. Please try again.",
-		})
-		return
-	}
-
+	newComment.Author = claims.Username
 	newComment.UUID = uuid.NewString()
 	newComment.ContentUUID = content.UUID
-	newComment.AccountUUID = account.UUID
+	newComment.AccountUUID = claims.AccountUUID
 	newComment.Upvote = 0
 	newComment.Downvote = 0
 	newComment.Deleted = false
@@ -102,7 +121,32 @@ func CreateCommentReply(c *gin.Context) {
 	var parentComment Comment
 	var content content.Content
 	var hive hive.Hive
-	var account account.Account
+
+	cookie, err := c.Request.Cookie("Token")
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	tokenString := cookie.Value
+	if err := token.VerifyToken(tokenString); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	claims, err := token.ParseToken(tokenString)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
 	uid := c.Param("uuid")
 	pid := c.Param("parentuuid")
 
@@ -131,17 +175,11 @@ func CreateCommentReply(c *gin.Context) {
 		return
 	}
 
-	if result := db.Db.Where("username = ?", newComment.Author).First(&account); result.Error != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{
-			"Error": "An error occurred. Please try again.",
-		})
-		return
-	}
-
+	newComment.Author = claims.Username
 	newComment.UUID = uuid.NewString()
 	newComment.ParentUUID = parentComment.UUID
 	newComment.ContentUUID = content.UUID
-	newComment.AccountUUID = account.UUID
+	newComment.AccountUUID = claims.AccountUUID
 	newComment.Upvote = 0
 	newComment.Downvote = 0
 	newComment.Deleted = false
@@ -171,6 +209,24 @@ func CreateCommentReply(c *gin.Context) {
 
 func GetCommentsByContentUuid(c *gin.Context) {
 	var comment []Comment
+
+	cookie, err := c.Request.Cookie("Token")
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	tokenString := cookie.Value
+	if err := token.VerifyToken(tokenString); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
 	uuid := c.Param("uuid")
 
 	if result := db.Db.Where("content_uuid = ?", uuid).Find(&comment); result.Error != nil {
@@ -185,6 +241,24 @@ func GetCommentsByContentUuid(c *gin.Context) {
 
 func GetCommentByUuid(c *gin.Context) {
 	var comment Comment
+
+	cookie, err := c.Request.Cookie("Token")
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	tokenString := cookie.Value
+	if err := token.VerifyToken(tokenString); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
 	uuid := c.Param("uuid")
 
 	if result := db.Db.Where("uuid = ?", uuid).First(&comment); result.Error != nil {
@@ -200,6 +274,24 @@ func GetCommentByUuid(c *gin.Context) {
 func GetCommentByUuidWithReplies(c *gin.Context) {
 	var comment Comment
 	var replies []Comment
+
+	cookie, err := c.Request.Cookie("Token")
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	tokenString := cookie.Value
+	if err := token.VerifyToken(tokenString); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
 	uuid := c.Param("uuid")
 
 	if result := db.Db.Where("uuid = ?", uuid).First(&comment); result.Error != nil {
@@ -228,6 +320,24 @@ func DeleteCommentByUuid(c *gin.Context) {
 	var comment Comment
 	var content content.Content
 	var hive hive.Hive
+
+	cookie, err := c.Request.Cookie("Token")
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	tokenString := cookie.Value
+	if err := token.VerifyToken(tokenString); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
 	uuid := c.Param("uuid")
 
 	if result := db.Db.Where("uuid = ?", uuid).First(&comment); result.Error != nil {
@@ -270,6 +380,24 @@ func UndeleteCommentByUuid(c *gin.Context) {
 	var comment Comment
 	var content content.Content
 	var hive hive.Hive
+
+	cookie, err := c.Request.Cookie("Token")
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	tokenString := cookie.Value
+	if err := token.VerifyToken(tokenString); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
 	uuid := c.Param("uuid")
 
 	if result := db.Db.Where("uuid = ?", uuid).First(&comment); result.Error != nil {
@@ -312,6 +440,23 @@ func UpdateCommentByUuid(c *gin.Context) {
 	var comment Comment
 	var updateComment Comment
 
+	cookie, err := c.Request.Cookie("Token")
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	tokenString := cookie.Value
+	if err := token.VerifyToken(tokenString); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
 	if err := c.BindJSON(&updateComment); err != nil {
 		return
 	}
@@ -337,10 +482,34 @@ func UpdateCommentByUuid(c *gin.Context) {
 
 func AddCommentUpvoteByUuid(c *gin.Context) {
 	var comment Comment
-	var account account.Account
 	var commentVote CommentVote
+
+	cookie, err := c.Request.Cookie("Token")
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	tokenString := cookie.Value
+	if err := token.VerifyToken(tokenString); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	claims, err := token.ParseToken(tokenString)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
 	uuid := c.Param("uuid")
-	accountUuid := c.Query("auuid")
 
 	//check comment exist
 	if result := db.Db.Where("uuid = ?", uuid).First(&comment); result.Error != nil {
@@ -350,16 +519,8 @@ func AddCommentUpvoteByUuid(c *gin.Context) {
 		return
 	}
 
-	//check account exist
-	if result := db.Db.Where("uuid = ?", accountUuid).First(&account); result.Error != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"Error": "An error occurred. Please try again.",
-		})
-		return
-	}
-
 	voteQuery := map[string]interface{}{
-		"account_uuid": accountUuid,
+		"account_uuid": claims.AccountUUID,
 		"comment_uuid": uuid,
 	}
 
@@ -367,7 +528,7 @@ func AddCommentUpvoteByUuid(c *gin.Context) {
 	if result := db.Db.Where(voteQuery).First(&commentVote); result.Error != nil {
 		//user has no record
 		comment.Upvote += 1
-		commentVote.AccountUUID = accountUuid
+		commentVote.AccountUUID = claims.AccountUUID
 		commentVote.CommentUUID = uuid
 		commentVote.Upvote = true
 		commentVote.Downvote = false
@@ -404,10 +565,34 @@ func AddCommentUpvoteByUuid(c *gin.Context) {
 
 func RemoveCommentUpvoteByUuid(c *gin.Context) {
 	var comment Comment
-	var account account.Account
 	var commentVote CommentVote
+
+	cookie, err := c.Request.Cookie("Token")
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	tokenString := cookie.Value
+	if err := token.VerifyToken(tokenString); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	claims, err := token.ParseToken(tokenString)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
 	uuid := c.Param("uuid")
-	accountUuid := c.Query("auuid")
 
 	//check comment exist
 	if result := db.Db.Where("uuid = ?", uuid).First(&comment); result.Error != nil {
@@ -417,16 +602,8 @@ func RemoveCommentUpvoteByUuid(c *gin.Context) {
 		return
 	}
 
-	//check account exist
-	if result := db.Db.Where("uuid = ?", accountUuid).First(&account); result.Error != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"Error": "An error occurred. Please try again.",
-		})
-		return
-	}
-
 	voteQuery := map[string]interface{}{
-		"account_uuid": accountUuid,
+		"account_uuid": claims.AccountUUID,
 		"comment_uuid": uuid,
 	}
 
@@ -459,10 +636,34 @@ func RemoveCommentUpvoteByUuid(c *gin.Context) {
 
 func AddCommentDownvoteByUuid(c *gin.Context) {
 	var comment Comment
-	var account account.Account
 	var commentVote CommentVote
+
+	cookie, err := c.Request.Cookie("Token")
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	tokenString := cookie.Value
+	if err := token.VerifyToken(tokenString); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	claims, err := token.ParseToken(tokenString)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
 	uuid := c.Param("uuid")
-	accountUuid := c.Query("auuid")
 
 	//check comment exist
 	if result := db.Db.Where("uuid = ?", uuid).First(&comment); result.Error != nil {
@@ -472,16 +673,8 @@ func AddCommentDownvoteByUuid(c *gin.Context) {
 		return
 	}
 
-	//check account exist
-	if result := db.Db.Where("uuid = ?", accountUuid).First(&account); result.Error != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"Error": "An error occurred. Please try again.",
-		})
-		return
-	}
-
 	voteQuery := map[string]interface{}{
-		"account_uuid": accountUuid,
+		"account_uuid": claims.AccountUUID,
 		"comment_uuid": uuid,
 	}
 
@@ -489,7 +682,7 @@ func AddCommentDownvoteByUuid(c *gin.Context) {
 	if result := db.Db.Where(voteQuery).First(&commentVote); result.Error != nil {
 		//user has no record
 		comment.Downvote += 1
-		commentVote.AccountUUID = accountUuid
+		commentVote.AccountUUID = claims.AccountUUID
 		commentVote.CommentUUID = uuid
 		commentVote.Upvote = false
 		commentVote.Downvote = true
@@ -526,10 +719,34 @@ func AddCommentDownvoteByUuid(c *gin.Context) {
 
 func RemoveCommentDownvoteByUuid(c *gin.Context) {
 	var comment Comment
-	var account account.Account
 	var commentVote CommentVote
+
+	cookie, err := c.Request.Cookie("Token")
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	tokenString := cookie.Value
+	if err := token.VerifyToken(tokenString); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
+	claims, err := token.ParseToken(tokenString)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return
+	}
+
 	uuid := c.Param("uuid")
-	accountUuid := c.Query("auuid")
 
 	//check comment exist
 	if result := db.Db.Where("uuid = ?", uuid).First(&comment); result.Error != nil {
@@ -539,16 +756,8 @@ func RemoveCommentDownvoteByUuid(c *gin.Context) {
 		return
 	}
 
-	//check account exist
-	if result := db.Db.Where("uuid = ?", accountUuid).First(&account); result.Error != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"Error": "An error occurred. Please try again.",
-		})
-		return
-	}
-
 	voteQuery := map[string]interface{}{
-		"account_uuid": accountUuid,
+		"account_uuid": claims.AccountUUID,
 		"comment_uuid": uuid,
 	}
 
