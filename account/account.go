@@ -34,6 +34,10 @@ type ResponseAccount struct {
 	Created  pq.NullTime `json:"Created"`
 }
 
+type RefreshToken struct {
+	RefreshToken string `json:"RefreshToken"`
+}
+
 type UpdatePassword struct {
 	Old string `json:"Old"`
 	New string `json:"New"`
@@ -110,7 +114,7 @@ func AccountLogin(c *gin.Context) {
 		return
 	}
 
-	token, err := token.CreateToken(account.Username, account.UUID)
+	authToken, err := token.CreateToken(account.Username, account.UUID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"Error": "Error: A error occurred creating the token. Please try again.",
@@ -118,8 +122,17 @@ func AccountLogin(c *gin.Context) {
 		return
 	}
 
+	refreshToken, err := token.CreateRefreshToken(account.Username, account.UUID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"Error": "Error: A error occurred creating the refresh token. Please try again.",
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"Token": token,
+		"Token":        authToken,
+		"RefreshToken": refreshToken,
 	})
 }
 
@@ -223,5 +236,46 @@ func ChangePassword(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"Message": "Password successfully updated.",
+	})
+}
+
+func RefreshAuthToken(c *gin.Context) {
+	var refreshToken RefreshToken
+
+	if err := c.BindJSON(&refreshToken); err != nil {
+		return
+	}
+
+	_, validRefToken := utils.ValidateRefreshAuthentication(c, refreshToken.RefreshToken)
+	if !validRefToken {
+		return
+	}
+
+	claims, err := token.ParseRefreshToken(refreshToken.RefreshToken)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"Error": "Error: A error occurred parsing the refresh token. Please try again.",
+		})
+		return
+	}
+
+	authToken, err := token.CreateToken(claims.Username, claims.AccountUUID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"Error": "Error: A error occurred creating the token. Please try again.",
+		})
+		return
+	}
+	refToken, err := token.CreateRefreshToken(claims.Username, claims.AccountUUID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"Error": "Error: A error occurred creating the refresh token. Please try again.",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"Token":        authToken,
+		"RefreshToken": refToken,
 	})
 }

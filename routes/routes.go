@@ -52,6 +52,7 @@ func Routes(router *gin.Engine) {
 	// Account
 	router.POST("/account/create", account.CreateAccount)
 	router.POST("/account/login", account.AccountLogin)
+	router.POST("/account/token/refresh", account.RefreshAuthToken)
 	router.GET("/account/token/validate", account.ValidateAccountToken)
 	router.GET("/account", account.GetAccount)
 	router.PATCH("/account/change-password", account.ChangePassword)

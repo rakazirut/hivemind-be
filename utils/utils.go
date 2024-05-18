@@ -35,11 +35,47 @@ func JsonDataHasKey(data interface{}, key string) (interface{}, bool) {
 
 func ValidateAuthentication(c *gin.Context, authToken string) (*token.UserClaim, bool) {
 	validToken := token.CheckToken(c, authToken)
+	expire := token.CheckTokenNotExpired(c, authToken)
 
 	if !validToken {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return nil, false
+	}
+	if !expire {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Token has expired.",
+		})
 		return nil, false
 	}
 	claims, err := token.ParseToken(authToken)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return nil, false
+	}
+	return claims, true
+}
+
+func ValidateRefreshAuthentication(c *gin.Context, refreshToken string) (*token.RefreshUserClaim, bool) {
+	validToken := token.CheckRefreshToken(c, refreshToken)
+	expire := token.CheckRefreshTokenNotExpired(c, refreshToken)
+
+	if !validToken {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Unauthorized.",
+		})
+		return nil, false
+	}
+	if !expire {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": "Token has expired.",
+		})
+		return nil, false
+	}
+	claims, err := token.ParseRefreshToken(refreshToken)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"Error": "Unauthorized.",
